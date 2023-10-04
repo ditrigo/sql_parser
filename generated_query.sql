@@ -14,29 +14,23 @@ $$
 		EXECUTE "SELECT" || v_origin || "FROM csv_attributes WHERE inn LIKE" || <inn (23445667)> into v_value;
 
 		IF сальдо>100 THEN
-			v_mas[0] := 2;
+			v_mas[0] := 0;
 		ELSE
-			IF  вклад>300 THEN
-				v_mas[0] := 5;
+			IF  влад>300 THEN
+				v_mas[0] := 11;
 			ELSE
-				v_mas[0] := 6;
+				v_mas[0] := 12;
 
-		IF кредит>200 THEN
+		IF кредит<200 THEN
+			v_mas[1] := 5;
+		ELSE
 			v_mas[1] := 7;
-		ELSE
-			v_mas[1] := 9;
-
-		IF штраф<300 THEN
-			v_mas[2] := 11;
-		ELSE
-			v_mas[2] := 12;
 
 				END IF;
 			END IF;
 		END IF;
-		END IF;
 
-		v_rate = v_mas[0] + v_mas[1] - v_mas[2];
+		v_rate = v_mas[0] + v_mas[1];
 		return v_rate;
 
 	END;

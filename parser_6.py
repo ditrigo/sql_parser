@@ -1,14 +1,15 @@
-﻿from sys import argv
+from sys import argv
 import regex as re
 
 
 def split_expression(input_string):
 
-    operators = r'\s*[-+*/]\s*'
+    operators = r'\)\s*[-+*/]\s*'
+    operators_delim = r'\s*[-+*/]\s*'
 
     matches = re.split(operators, input_string)
 
-    delimiters = re.findall(operators, input_string)
+    delimiters = re.findall(operators_delim, input_string)
     delimiters = [d.replace(' ', '') for d in delimiters]
 
     return matches, delimiters
@@ -33,18 +34,19 @@ def lexer(contents):
         tokens.append(temp_str)
         items = []
 
-        pattern = r"\s*условие\s*\("
+        pattern_word = r"\s*условие\s*\("
+        pattern_numb = r"[^-0-9]"
 
         for token in tokens:    
             
-            if re.match(pattern, token):
-                token = re.sub(r"условие\s*\(", "", token)
+            if re.match(pattern_word, token):
+                token = re.sub(pattern_word, "", token)
                 token = token.replace(" и ", " AND ")
                 token = token.replace(" или ", " OR ")
                 items.append(("word", token))
 
             else:
-                token = re.sub(r"[^-0-9]", "", token)
+                token = re.sub(pattern_numb, "", token)
                 items.append(("number", token))
 
         nLines.append(items)
@@ -84,7 +86,6 @@ def generate_sql_query(data, delimiters):
                     prev_type = 'word'
                     end += f"{tabs}END IF;\n"
                     tabs += "\t"
-                
 
                 elif item[0] == 'number':
                     if prev_type == 'number':
@@ -118,11 +119,11 @@ def parser(str):
 
 if __name__ == '__main__':
 
-    content = "условие(сальдо>100, 0, условие(влад>300, 11, 12)) + условие(кредит<200, 5, 7)"
+    content = "условие(сальдо+депозит>100, 2, условие(вклад>300, 5, 6)) + условие(кредит>200, 7, 9) - условие(штраф<300, 11, 12)"
 
     expressions, delimiters = split_expression(content)
-    # print(expressions)
-    # print("----------------")
+    print(expressions)
+    print("----------------")
     express_list = []
     for expression in expressions:
         express = lexer(expression)
@@ -130,12 +131,12 @@ if __name__ == '__main__':
         # print("----------------")
         express_list.append(express)
         
-    # print(express_list)
-    # print("----------------")
+    print(express_list)
+    print("----------------")
     lst = generate_sql_query(express_list, delimiters)
     print(lst)
-    # print("----------------")
-    # print(delimiters)
+    print("----------------")
+    print(delimiters)
 
     with open('generated_query.sql', 'w', encoding='utf-8-sig') as f:
         f.write(lst)
