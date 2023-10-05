@@ -94,51 +94,71 @@ def generate_sql_query(data, delimiters):
 
     sql_query_end = ""
     sql_query_temp = ""
-
+    mas = []
+    mas.append("")
+    i = 0
     comp_temp = ""
 
     
     for index, expr in enumerate(data):
 
-        prev_type = None
+        prev_item = None
+        prev_prev = None
 
         for sublist in expr:
             
             for item in sublist:
+
+                if item[0] == 'condition':
+                    if prev_item != 'dot':
+                        if prev_prev == 'number':
+                            mas[i] += f"\n{tabs}ELSE\n\tmas[{i}] := mas[{i+1}];"
+                        else:
+                            mas[i] += f"mas[{i+1}]"
+                        i += 1
+                        # tabs += "\t"
+                        mas.append(f"\n{tabs}IF ")
+                    else:
+                        mas[i] += f"{tabs}IF"
+                    prev_prev = prev_item
+                    prev_item = 'condition'
                 
-                if prev_type == 'comparison':
-                    sql_query_end += f"{item[1]}"  
+                elif item[0] == 'word':     
+                    mas[i] += f"{item[1]}"
+                    # else:
+                    #     temp = "IF"
+                    prev_prev = prev_item
+                    prev_item = 'word'
 
+                elif item[0] == 'delin':  # +-*/
+                    mas[i] += f" {item[1]} "
+                    prev_prev = prev_item
+                    prev_item = 'delin'
 
-                if item[1] == 'условие':
-                    sql_query_end += f"{tabs}IF " 
-                
-                elif item[0] == 'delin':
-                    sql_query_end += f" {item[1]} "
+                elif item[0] == 'comparison':  # <>=
+                    mas[i] += f" {item[1]} "
+                    prev_prev = prev_item
+                    prev_item = 'comparison'
 
-                elif item[1] == '(':
-                    sql_query_end = ""
-                elif item[1] == ')':
-                    sql_query += sql_query_end
+                elif item[0] == 'number':   # 123
+                    if prev_item == 'comparison':
+                        mas[i] += f"{item[1]}"
+                    elif prev_prev == 'number':
+                        mas[i] += f"\n{tabs}ELSE\n{tabs}\tmas[{i}] := {item[1]};"
+                    elif prev_prev == 'paren' or prev_prev == 'delin':
+                        mas[i] += f"{item[1]}"
+                    else:
+                        mas[i] += f"\n{tabs}\tmas[{i}] := {item[1]};"
+                    prev_prev = prev_item
+                    prev_item = 'number'
 
-                elif item[0] == 'comparison':
-                    prev_type = 'comparison'
-                    comp_temp = f"{item[1]}"
-
-                elif item[0] == 'word':
-            
-                    if prev_type == 'number':
-                        sql_query_end += f"{tabs[:-1]}ELSE\n"
-                    sql_query_end += f"{item[1]}"
-                    prev_type = 'word'
-                    end += f"{tabs}END IF;\n"
-                    tabs += "\t"
-
-                elif item[0] == 'number':
-                    if prev_type == 'number':
-                        sql_query_end += f"{tabs[:-1]}ELSE\n"
-                    sql_query_end += f"{tabs}{target}[{index}] := {item[1]};\n"
-                    prev_type = 'number'
+                elif item[0] == 'paren':   # ()            
+                    if item[1] == ')':
+                        sql_query += mas[i]
+                        mas[i] = ""
+                        i -= 1
+                    prev_prev = prev_item
+                    prev_item = 'paren'
 
                 
         
