@@ -15,6 +15,14 @@ def split_expression(input_string):
     return matches, delimiters
 
 
+def extract_condition(token):
+    pattern = r'[^-+*/]?\s*условие\([^)]*\)\s*[<>]=?'
+    match = re.search(pattern, token)
+    if match:
+        return match.group(0)
+    return None
+
+
 def lexer(contents):
     lines = contents.split('\n')
 
@@ -23,34 +31,50 @@ def lexer(contents):
         chars = list(line)
         temp_str = ""
         tokens = []
-
-        for char in chars:
-            if char == ",":
-                tokens.append(temp_str)
-                temp_str = ""
-            else:
-                temp_str += char
+        
+        print("expression----------------")
+        print(line)
+        # for char in chars:
+        #     if char == ",":
+        #         tokens.append(temp_str)
+        #         temp_str = ""
+        #     else:
+        #         temp_str += char
 
         tokens.append(temp_str)
         items = []
+        
+        tokens = re.findall(r'\b\w+\b|[-+*/><=(),]', line)
+        
 
         pattern_word = r"\s*условие\s*\("
         pattern_numb = r"[^-0-9]"
+        # pattern_if = r"[^-+=<>]"
+        pattern_in = r"условие\((.*?)\)(?=[+\-*/])"
 
-        for token in tokens:    
-            
-            if re.match(pattern_word, token):
-                token = re.sub(pattern_word, "", token)
-                token = token.replace(" и ", " AND ")
-                token = token.replace(" или ", " OR ")
-                items.append(("word", token))
+        prev_type = None
 
-            else:
-                token = re.sub(pattern_numb, "", token)
-                items.append(("number", token))
+        print("tokens----------------")
+        print(tokens)
+
+        for token in tokens:
+            if token.isnumeric():
+                items.append(('number', token))
+            elif token in ('+', '-', '*', '/'):
+                items.append(('delin', token))
+            elif token in ('>', '<', '>=', '<=', '==', '!='):
+                items.append(('comparison', token))
+            elif token in ('(', ')'):
+                items.append(('paren', token))
+            elif token == 'условие':
+                items.append(('condition', token))
+            elif token != ',':
+                items.append(('word', token))
 
         nLines.append(items)
 
+        print("nLines----------------")
+        print(nLines, "\n")
     return nLines
 
 
@@ -67,7 +91,11 @@ def generate_sql_query(data, delimiters):
     end = ""
     end_expr = "\n\t\tv_rate = "
     tabs = "\t\t"
-    j = 0
+
+    sql_query_end = ""
+    sql_query_temp = ""
+
+    comp_temp = ""
 
     
     for index, expr in enumerate(data):
@@ -77,21 +105,42 @@ def generate_sql_query(data, delimiters):
         for sublist in expr:
             
             for item in sublist:
+                
+                if prev_type == 'comparison':
+                    sql_query_end += f"{item[1]}"  
 
-                if item[0] == 'word':
+
+                if item[1] == 'условие':
+                    sql_query_end += f"{tabs}IF " 
+                
+                elif item[0] == 'delin':
+                    sql_query_end += f" {item[1]} "
+
+                elif item[1] == '(':
+                    sql_query_end = ""
+                elif item[1] == ')':
+                    sql_query += sql_query_end
+
+                elif item[0] == 'comparison':
+                    prev_type = 'comparison'
+                    comp_temp = f"{item[1]}"
+
+                elif item[0] == 'word':
             
                     if prev_type == 'number':
-                        sql_query += f"{tabs[:-1]}ELSE\n"
-                    sql_query += f"{tabs}IF {item[1]} THEN\n"
+                        sql_query_end += f"{tabs[:-1]}ELSE\n"
+                    sql_query_end += f"{item[1]}"
                     prev_type = 'word'
                     end += f"{tabs}END IF;\n"
                     tabs += "\t"
 
                 elif item[0] == 'number':
                     if prev_type == 'number':
-                        sql_query += f"{tabs[:-1]}ELSE\n"
-                    sql_query += f"{tabs}{target}[{index}] := {item[1]};\n"
+                        sql_query_end += f"{tabs[:-1]}ELSE\n"
+                    sql_query_end += f"{tabs}{target}[{index}] := {item[1]};\n"
                     prev_type = 'number'
+
+                
         
             if sublist != expr[-1]:
                 sql_query += f"{tabs}ELSE\n"
@@ -119,24 +168,32 @@ def parser(str):
 
 if __name__ == '__main__':
 
-    content = "условие(сальдо+депозит>100, 2, условие(вклад>300, 5, 6)) + условие(кредит>200, 7, 9) - условие(штраф<300, 11, 12)"
+    content = "условие(сальдо+условие(вклад>300, 5, условие(выручка>123, 333, 444))>100, 2, 10)"
 
     expressions, delimiters = split_expression(content)
-    print(expressions)
-    print("----------------")
+
+    print("\n\n")
+    print("expressions----------------")
+    print(expressions, "\n")
+    
     express_list = []
     for expression in expressions:
         express = lexer(expression)
+        
+        # print("express----------------")
         # print(express)
-        # print("----------------")
+        
         express_list.append(express)
         
-    print(express_list)
-    print("----------------")
-    lst = generate_sql_query(express_list, delimiters)
-    print(lst)
-    print("----------------")
-    print(delimiters)
+    # print("express_list----------------")
+    # print(express_list)
 
+    lst = generate_sql_query(express_list, delimiters)
+    
+    # print(lst)
+    # print("----------------")
+    # print(delimiters)
+    # print("----------------")
+    print("\n\n")
     with open('generated_query.sql', 'w', encoding='utf-8-sig') as f:
         f.write(lst)
