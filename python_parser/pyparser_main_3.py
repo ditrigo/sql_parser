@@ -1,6 +1,10 @@
+from datetime import datetime
+
 def pyparser(str):
+
     if not str:
         return []
+    
     res = []
     i = 0
     cond_counter = 0
@@ -29,7 +33,6 @@ def pyparser(str):
                 res.append("res2")
                 res.append(result_1)
 
-                
                 if str[i+1:] != '':
                     res.append("add_after")
                     res.append(str[i+1:])
@@ -37,6 +40,7 @@ def pyparser(str):
             cond_counter -= 1
 
         elif str[i] == ";" and cond_counter == 1:
+
             if res_counter == 0:
                 res_counter += 1
                 cond_end = i
@@ -64,8 +68,10 @@ def pyparser(str):
 
 
 def generate_condition_string(lst):
+
     result = ""
     i = 0
+
     while i < len(lst):
         
         if lst[i] == "cond":
@@ -92,15 +98,12 @@ def generate_condition_string(lst):
     return result
 
 
-def replace_operators(expression):
+def pre_replace(expression):
 
     expression = expression.replace("=", "==")
     expression = expression.replace("<>", "!=")
     expression = expression.replace(",", ".")
 
-    return expression
-
-def pre_replace(expression):
     while "И(" in expression or "ИЛИ(" in expression:
         i_and = expression.find("И(")
         i_or = expression.find("ИЛИ(")
@@ -119,27 +122,51 @@ def pre_replace(expression):
             sub_expr = sub_expr.replace(";", " or ")
             expression = expression[:start] + sub_expr + expression[end+1:]
 
+    while "ПОИСК(" in expression:
+        start = expression.find("ПОИСК(")
+        end = expression.find(")", start)
+        sub_expr = expression[start+6:end]
+        search_term, search_in = sub_expr.split(";")
+        replacement = f'{search_term} in {search_in}'
+        expression = expression[:start] + replacement + expression[end+1:]
+
+    while "РАЗНДАТ(" in expression:
+        start = expression.find("РАЗНДАТ(")
+        end = expression.find('")', start)
+        sub_expr = expression[start+8:end]
+        args = sub_expr.split(";")
+        if args[1] == "СЕГОДНЯ()":
+            args[1] = "datetime.today()"
+        unit = args[2]
+        if unit == '"y"':
+            replacement = f'abs({args[0]}.days - {args[1]}.days)//365'
+        elif unit == '"d"':
+            replacement = f'abs({args[0]}.days - {args[1]}.days)'
+        else:
+            replacement = f'abs({args[0]} - {args[1]})'
+        expression = expression[:start] + replacement + expression[end+2:]
+    
     return expression
 
-expression = 'условие(ИЛИ(dolg=0;credit>100);0;условие(s_1600_4=0 and dolg>0;-15;условие(dolg/s_1600_4>0,25;-15;0)))'
 
-expression = pre_replace(expression)
-# print(expression)
-result = pyparser(expression)
-result_1 = generate_condition_string(result)
-result_2 = replace_operators(result_1)
-
+# Строка 77, Коэффициент долга по 44-ФЗ
+expression = 'условие(dolg=0;0;условие(И(s_1600_4=0;dolg>0);-15;условие(dolg/s_1600_4>0,25;-15;0)))'
 
 # Correct answer: 
 # 0 if (dolg == 0) else (-15 if (s_1600_4 == 0 and dolg > 0) else (-15 if dolg / s_1600_4 > 0.25 else 0))")
 
-print(result_2)
+expression = pre_replace(expression)
+
+result = pyparser(expression)
+result_1 = generate_condition_string(result)
+print(result_1)
+
 
 # Выполнение в питоне
-# try:
-#     dolg = 5
-#     s_1600_4 = 1
-#     answer = eval(result_2)
-#     print("Answer:", answer)
-# except SyntaxError:
-#     print("ну гг")
+try:
+    dolg = 5
+    s_1600_4 = 1
+    answer = eval(result_1)
+    print("Answer:", answer)
+except SyntaxError:
+    print("ну гг")
