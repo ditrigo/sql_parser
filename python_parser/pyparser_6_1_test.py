@@ -13,10 +13,8 @@ def construct_string(lst):
 
     return result
 
-# Пример списка
 lst = [['a + ', 'вклад>300', '5', ['выручка>123', '333', '444'], ' + b>100'], '2', '10']
 
-# Генерируем строку
 expression = construct_string(lst)
 
 print(expression)

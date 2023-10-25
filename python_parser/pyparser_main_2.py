@@ -1,3 +1,5 @@
+# pyparser_6_2.py copy
+
 def pyparser(str):
     if not str:
         return []
@@ -95,6 +97,7 @@ def replace_operators(expression):
 
     expression = expression.replace("=", "==")
     expression = expression.replace("<>", "!=")
+    expression = expression.replace(",", ".")
 
     while "И(" in expression or "ИЛИ(" in expression:
         i_and = expression.find("И(")
@@ -116,6 +119,7 @@ def replace_operators(expression):
 
     return expression
 
+
 expression = 'условие(dolg=0;0;условие(s_1600_4=0 and dolg>0;-15;условие(dolg/s_1600_4>0,25;-15;0)))'
 
 result = pyparser(expression)
@@ -127,3 +131,12 @@ result_2 = replace_operators(result_1)
 # 0 if (dolg == 0) else (-15 if (s_1600_4 == 0 and dolg > 0) else (-15 if dolg / s_1600_4 > 0.25 else 0))")
 
 print(result_2)
+
+# Выполнение в питоне
+try:
+    dolg = 5
+    s_1600_4 = 1
+    answer = eval(result_2)
+    print("Answer:", answer)
+except SyntaxError:
+    print("ну гг")

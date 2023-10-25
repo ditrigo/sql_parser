@@ -1,69 +1,37 @@
-# pyparser_6_1.py copy
+def construct_expression(lst, add_before='', cond='', res1='', res2='', add_after=''):
+    print("+")
+    result = ""
+    for item in lst:
+        # if isinstance(item, list):
+        #     result += construct_expression(item, add_before, cond, res1, res2, add_after)
+        if isinstance(item, str):
+            if lst.index(item) + 1 < len(lst) and isinstance(lst[lst.index(item) + 1], str):
+                if item == 'add_before':
+                    add_before = lst[lst.index(item) + 1]
+                if item == 'cond':
+                    cond = lst[lst.index(item) + 1]
+                if item == 'res1':
+                    res1 = lst[lst.index(item) + 1]
+                if item == 'res2':
+                    res2 = lst[lst.index(item) + 1]
+                if item == 'add_after':
+                    add_after = lst[lst.index(item) + 1]
+            else:
+                if item == 'add_before':
+                    add_before = construct_expression(item, add_before, cond, res1, res2, add_after)
+                if item == 'cond':
+                    cond = construct_expression(item, add_before, cond, res1, res2, add_after)
+                if item == 'res1':
+                    res1 = construct_expression(item, add_before, cond, res1, res2, add_after)
+                if item == 'res2':
+                    res2 = construct_expression(item, add_before, cond, res1, res2, add_after)
+                if item == 'add_after':
+                    add_after = construct_expression(item, add_before, cond, res1, res2, add_after)
+    result += f"{add_before} ({res1} if {cond} else {res2}) {add_after}"
+    return result
 
-def pyparser(str):
-    if not str:
-        return []
-    res = []
-    i = 0
-    cond_counter = 0
-    res_counter = 0
-    while i<len(str):
+lst = ['cond', ['add_before', 'a + ', 'cond', 'вклад>300', 'res1', '5', 'res2', ['cond', 'выручка>123', 'res1', '333', 'res2', '444'], 'add_after', ' + b>100'], 'res1', '2', 'res2', '10']
 
-        if str[i] == "у" and str[i:i+8] == "условие(":
+expression = construct_expression(lst)
 
-            if cond_counter == 0: 
-                cond_start = i+8
-
-                if str[0:i] != '':
-                    res.append("add_before")
-                    res.append(str[0:i])
-            
-            cond_counter += 1
-            i += 7
-
-        elif str[i] == ")":
-
-            if cond_counter == 1:
-                res2_end = i
-                result_1 = pyparser(str[res2_start:res2_end])
-
-                res.append("res2")
-                res.append(result_1)
-
-                
-                if str[i+1:] != '':
-                    res.append("add_after")
-                    res.append(str[i+1:])
-
-            cond_counter -= 1
-
-        elif str[i] == ";" and cond_counter == 1:
-            if res_counter == 0:
-                res_counter += 1
-                cond_end = i
-                res1_start = i+1
-                result_1 = pyparser(str[cond_start:cond_end])
-
-                res.append("cond")
-                res.append(result_1)
-                
-            elif res_counter == 1:
-                res_counter = 0
-                res1_end = i
-                res2_start = i+1
-                result_1 = pyparser(str[res1_start:res1_end])
-
-                res.append("res1")
-                res.append(result_1)
-            
-        i += 1
-
-    if res == []:
-        return str
-    else:
-        return res
-
-
-expression = "условие(a + условие(вклад>300;5;условие(выручка>123;333;444)) + b>100;2;10)"
-result = pyparser(expression)
-print(result)
+print(expression)
