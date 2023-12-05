@@ -117,12 +117,14 @@ def pre_replace(expression):
     expression = re.sub(r'(?<![<=>!])=(?!=)', '==', expression)
     expression = expression.replace("<>", "!=")
     expression = expression.replace(",", ".")
+    expression = expression.lower().replace(" and ", " and ")
+    expression = expression.lower().replace(" or ", " or ")
     expression = expression.replace("||", " or ")
-    expression = expression.replace("ABS(", "abs(")
+    expression = expression.lower().replace("abs(", "abs(")
 
-    while "И(" in expression or "ИЛИ(" in expression:
-        i_and = expression.find("И(")
-        i_or = expression.find("ИЛИ(")
+    while "и(" in expression.lower() or "или(" in expression.lower():
+        i_and = expression.lower().find("и(")
+        i_or = expression.lower().find("или(")
 
         if i_and != -1 and (i_or == -1 or i_and < i_or):
             start = i_and
@@ -160,28 +162,38 @@ def pre_replace(expression):
             sub_expr = sub_expr.replace(";", " or ")
             expression = expression[:start] + sub_expr + expression[end+1:]
 
-    while "ПОИСК(" in expression:
-        start = expression.find("ПОИСК(")
+    while "непоиск(" in expression.lower():
+        start = expression.lower().find("непоиск(")
+        end = expression.find(")", start)
+        sub_expr = expression[start+8:end]
+        search_term, search_in = sub_expr.split(";")
+        replacement = f'{search_term} not in {search_in}'
+        expression = expression[:start] + replacement + expression[end+1:]
+
+    while "поиск(" in expression.lower():
+        start = expression.lower().find("поиск(")
         end = expression.find(")", start)
         sub_expr = expression[start+6:end]
         search_term, search_in = sub_expr.split(";")
         replacement = f'{search_term} in {search_in}'
         expression = expression[:start] + replacement + expression[end+1:]
 
-    while "РАЗНДАТ(" in expression:
-        start = expression.find("РАЗНДАТ(")
+    while "разндат(" in expression.lower():
+        start = expression.lower().find("разндат(")
         end = expression.find('")', start)
-        sub_expr = expression[start+8:end]
+        sub_expr = expression[start+8:end+1]
         args = sub_expr.split(";")
-        if args[1] == "СЕГОДНЯ()":
+        if args[1].lower() == "сегодня()":
             args[1] = "datetime.today()"
-        unit = args[2]
+        unit = args[2]  
+
         if unit == '"y"':
-            replacement = f'abs({args[0]}.days - {args[1]}.days)//365'
+            replacement = f'abs({args[0]} - {args[1]}).days//365'
         elif unit == '"d"':
-            replacement = f'abs({args[0]}.days - {args[1]}.days)'
+            replacement = f'abs({args[0]} - {args[1]}).days'
         else:
             replacement = f'abs({args[0]} - {args[1]})'
+            
         expression = expression[:start] + replacement + expression[end+2:]
     
     return expression
@@ -189,7 +201,7 @@ def pre_replace(expression):
 
 def add_prefix(expression):
     def replace(match):
-        if match.group(0) not in {'if', 'else', 'and', 'or'}:
+        if match.group(0) not in {'if', 'else', 'and', 'or', 'not', 'in', 'abs', 'datetime', 'today', 'days'}:
             return 'imported_attr.' + match.group(0)
         else:
             return match.group(0)
@@ -200,7 +212,7 @@ def add_prefix(expression):
 
 
 def var_dict(expression):
-    reserved_keywords = {'if', 'else', 'and', 'or', 'datetime.today()'}
+    reserved_keywords = {'if', 'else', 'and', 'or', 'datetime.today()', 'not', 'in', 'abs', 'datetime', 'today', 'days'}
     pattern = r'([a-zA-Z_]\w*)'
     modified_vars = {}
 
@@ -246,10 +258,10 @@ def pyparser(expression):
     except Exception as e:
         return f"Error in generate_condition_string: {e}"
 
-    try:
-        expression = add_prefix(expression)
-    except Exception as e:
-        return f"Error in add_prefix: {e}"
+    # try:
+    #     expression = add_prefix(expression)
+    # except Exception as e:
+    #     return f"Error in add_prefix: {e}"
 
     return expression
 
