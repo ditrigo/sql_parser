@@ -27,15 +27,19 @@ dolg = 26000000
 dolg_overdue = 4
 force = 9.99
 start_ball = "микро"
+empty_item = 1
 
-expression = 'условие(ПОИСК("ликв";imported_attributes.status_egrn) or ПОИСК("исключ";imported_attributes.status_egrn);-140;условие(ПОИСК("действ";imported_attributes.status_egrn);0;-35))'
+a = 5
+b = 0
+
+expression = 'условие(ЕПУСТО(empty_item);1;0)'
 expression = pyparser(expression)
 print(expression)
 
 try:
     ast.parse(expression)
     print('OK syntax')
-    # expression = print(eval(expression))
+    expression = print(eval(expression))
 except Exception as e:
     print(f"Error in function: {e}")
 # print(replace_variables(expression, imported_attr))
@@ -46,3 +50,4 @@ except Exception as e:
 #     print(result)
 # except Exception as e:
 #     print(f"Error in eval: {e}") 
+
