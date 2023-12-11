@@ -113,6 +113,30 @@ def generate_condition_string(expression):
     return result
 
 
+def process_strings(expression, expression_second=None):
+
+    stripped_string = re.sub(r'(\w+\.)', '', expression)
+    variable_names = re.findall(r'\b(\w+)\b', expression)
+
+    restored_string = expression
+    for i in range(1, len(variable_names), 2):
+        original_var = variable_names[i]
+        stripped_var_name = re.sub(r'(\w+\.)', '', original_var)
+        new_var_name = f'{variable_names[i-1]}.{original_var}'
+        
+        pattern = r'(?<!\.)\b' + re.escape(original_var) + r'\b'
+        
+        if expression_second is not None:
+            expression_second = re.sub(pattern, new_var_name, expression_second)
+        
+        restored_string = re.sub(r'\b' + original_var + r'\b', stripped_var_name, restored_string)
+
+    if expression_second is not None:
+        return restored_string, expression_second
+    else:
+        return stripped_string
+    
+
 def pre_replace(expression):
 
     expression = re.sub(r'(?<![<=>!])=(?!=)', '==', expression)
@@ -214,14 +238,18 @@ def pre_replace(expression):
 
         error_condition_expression = expression[error_condition_start + 11:error_condition_end]
         condition_check, expression_if_error = error_condition_expression.split(";")
+        condition_original = condition_check
+
+        condition_check = process_strings(condition_check)
 
         denominators = [term.as_numer_denom()[1] for term in sympify(condition_check).as_ordered_terms()]
+
         conditions_list = [f'{denominator}!=0' for denominator in denominators]
         conditions_result = " and ".join(conditions_list)
 
-        replacement_expression = f'({condition_check} if {conditions_result} else {expression_if_error})'
+        _, conditions_result = process_strings(condition_original, conditions_result)
+        replacement_expression = f'({condition_original} if {conditions_result} else {expression_if_error})'
         expression = expression[:error_condition_start] + replacement_expression + expression[error_condition_end + 1:]
-
 
     while "епусто(" in expression.lower():
         empty_check_start = expression.lower().find("епусто(")

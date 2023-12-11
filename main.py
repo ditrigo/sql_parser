@@ -23,7 +23,7 @@ postup_thisyear = 10
 bznaper_lastyear = 10
 bznaper_thisyear = 20
 clr = 10
-dolg = 26000000
+# dolg = 26000000
 dolg_overdue = 4
 force = 9.99
 start_ball = "микро"
@@ -32,14 +32,20 @@ empty_item = 1
 a = 5
 b = 0
 
-expression = 'условие(ЕПУСТО(empty_item);1;0)'
+debit = 10
+credit = 20
+payment = "str"
+
+expression = 'условие(ЕСЛИОШИБКА(imported_attributes.dolg/(counted_attributes.dolg_in_balance+imported_attributes.dolg);imported_attributes.dolg*5)>20;10;0)'
 expression = pyparser(expression)
 print(expression)
 
 try:
     ast.parse(expression)
     print('OK syntax')
-    expression = print(eval(expression))
+    # eval(expression)
+except TypeError as e:
+    print(f"Неподдерживаемая операция для этого типа данных")
 except Exception as e:
     print(f"Error in function: {e}")
 # print(replace_variables(expression, imported_attr))
